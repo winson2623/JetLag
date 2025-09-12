@@ -11,8 +11,8 @@ mydb = mysql.connector.connect(
 my_cursor = mydb.cursor()
 
 #user input for flight_table
-origin = "LA"
-destination = "TPE"
+origin = "Los Angeles"
+destination = "Taipei"
 depart_datetime = "2025-09-12 01:00:00"
 arrival_datetime = "2025-09-13 05:00:00"
 flight_hours = 13
