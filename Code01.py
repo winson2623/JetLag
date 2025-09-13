@@ -68,3 +68,23 @@ print("Inserted plan_id:", plan_id)
 
 print(my_cursor.rowcount, " flight record inserted.")
 
+"""
+Pre-Flight Plan PseudoCode
+1. using the input data from input to create [pre_flight_schedule]
+2. decide the shift hours per day, lets say 1 hour per day according to [pre_days] input
+3. if flight direction is east, go to bed early -X hours, if flight west go to bed later +X hours per day.
+4. loop a table that creates suggested [pre_sleep_start] [pre_sleep_end] [notes]
+    [pre_sleep_start] = [avg_sleep_start] east- or west+ ([shift_hours] * [pre_days])
+                    example: 22 east- (1 * 3) = 19 is start of loop for column [pre_sleep_start]
+    [pre_sleep_end] = [avg_sleep_end] east- or west+ ([shift_hours] * [pre_days])
+                    example: 6 east- (1 * 3) = 3 is start of loop for column [pre_sleep_end]
+    [notes]    = [pre_sleep_start] - 6 hours = stop_caffeine      example 19 - 6 = "no caffeine after 13
+               = [pre_sleep_start] - 8 hours = stop_nap          example 19 - 8 = "no naps after 11
+"""
+
+"""
+Post-Flight Plan PseudoCode
+1. Let post flight plan be fixed according to the [avg_sleep_schedule] of the local time
+2. Adjust the range of nap time/caffeine intake according to the [post_adjust_days], does not matter if east or westward
+3. Could include the recommended time period to get sunlight
+"""
