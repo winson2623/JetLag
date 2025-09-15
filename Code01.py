@@ -11,6 +11,7 @@ mydb = mysql.connector.connect(
 #create cursor instance
 my_cursor = mydb.cursor()
 
+#MAKE THIS STRUCT?
 #user input for flight_table
 #name = input("Enter Name: ")
 #origin = input("Enter Origin City: ")
@@ -72,74 +73,44 @@ print(my_cursor.rowcount, " flight record inserted.")
 """
 
 #PRE FLIGHT PLAN TABLE
-#TO DO - CLEAN UP CODE
-
 shift_hours = 1
-pre_sleep_start = 0
-pre_sleep_end = 0
-
 
 datetime_convert = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M:%S")
 shifted_date = datetime_convert.date()
 
-#east means sleep early
-if direction == "east":
-    for i in range(pre_days):
-        next_day = shifted_date - timedelta(days= pre_days - i)
+def format_time(decimal_hour):
+    hours = int(decimal_hour)
+    minutes = int((decimal_hour - hours) * 60)
+    return f"{hours:02d}:{minutes:02d}"
 
-        print(next_day.month,"/",next_day.day)
-
-        avg_sleep_start = (avg_sleep_start - shift_hours) % 24
-        avg_sleep_end = (avg_sleep_end - shift_hours) % 24
-
-        hours_start = int(avg_sleep_start)
-        minutes_start = int((avg_sleep_start - hours_start) * 60)
-        hours_end = int(avg_sleep_end)
-        minutes_end = int((avg_sleep_end - hours_end) * 60)
-
-        print(f"pre_sleep_start time: {hours_start:02d}:{minutes_start:02d}")
-        print(f"pre_sleep_end time: {hours_end:02d}:{minutes_end:02d}")
-
-        stop_caffeine = (avg_sleep_start - 6) % 24
-        stop_nap = (avg_sleep_start - 8) % 24
-
-        sc_hours = int(stop_caffeine)
-        sc_minutes = int((stop_caffeine - sc_hours) * 60)
-        sn_hours = int(stop_nap)
-        sn_minutes = int((stop_nap - sn_hours) * 60)
-
-        print(f"no caffeine after: {sc_hours:02d}:{sc_minutes:02d}")
-        print(f"no power naps after: {sn_hours:02d}:{sn_minutes:02d}")
-
-#west means sleep later
-elif direction == "west":
-    for i in range(pre_days):
-        next_day = shifted_date - timedelta(days= pre_days - i)
-        print(next_day.month,"/",next_day.day)
-
-        avg_sleep_start = (avg_sleep_start + shift_hours) % 24
-        avg_sleep_end = (avg_sleep_end + shift_hours) % 24
-
-        hours_start = int(avg_sleep_start)
-        minutes_start = int((avg_sleep_start - hours_start) * 60)
-        hours_end = int(avg_sleep_end)
-        minutes_end = int((avg_sleep_end - hours_end) * 60)
-
-        print(f"pre_sleep_start time: {hours_start:02d}:{minutes_start:02d}")
-        print(f"pre_sleep_end time: {hours_end:02d}:{minutes_end:02d}")
-
-        stop_caffeine = (avg_sleep_start - 6) % 24
-        stop_nap = (avg_sleep_start - 8) % 24
-
-        sc_hours = int(stop_caffeine)
-        sc_minutes = int((stop_caffeine - sc_hours) * 60)
-        sn_hours = int(stop_nap)
-        sn_minutes = int((stop_nap - sn_hours) * 60)
-
-        print(f"no caffeine after: {sc_hours:02d}:{sc_minutes:02d}")
-        print(f"no power naps after: {sn_hours:02d}:{sn_minutes:02d}")
+if direction == "east": #east means sleep earlier
+    shift_direction = -1
+elif direction == "west": #west means sleep later
+    shift_direction = +1
 else:
-    print("Flight direction must be east or west, try again.")
+    print("Direction must be east or west, try again.")
+    shift_direction = 0
+
+
+if shift_direction:
+    for i in range(pre_days):
+        next_day = shifted_date - timedelta(days= pre_days - i)
+        print(next_day.month,"/",next_day.day)
+
+        #shift sleep times
+        avg_sleep_start = (avg_sleep_start + shift_direction * shift_hours) % 24
+        avg_sleep_end = (avg_sleep_end + shift_direction * shift_hours) % 24
+
+        print(f"pre_sleep_start time: ", format_time(avg_sleep_start))
+        print(f"pre_sleep_end time: ", format_time(avg_sleep_end))
+
+        #caffine & nap cut off time
+        stop_caffeine = (avg_sleep_start - 6) % 24
+        stop_nap = (avg_sleep_start - 8) % 24
+
+        print(f"no caffeine after: ", format_time(stop_caffeine))
+        print(f"no power naps after: ", format_time(stop_nap))
+
 
 
 
