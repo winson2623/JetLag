@@ -74,6 +74,8 @@ print(my_cursor.rowcount, " flight record inserted.")
 
 #PRE FLIGHT PLAN TABLE
 shift_hours = 1
+pre_sleep_start = avg_sleep_start
+pre_sleep_end = avg_sleep_end
 
 datetime_convert = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M:%S")
 shifted_date = datetime_convert.date()
@@ -81,7 +83,7 @@ shifted_date = datetime_convert.date()
 def format_time(decimal_hour):
     hours = int(decimal_hour)
     minutes = int((decimal_hour - hours) * 60)
-    return f"{hours:02d}:{minutes:02d}"
+    return f"{hours:01d}:{minutes:02d}"
 
 if direction == "east": #east means sleep earlier
     shift_direction = -1
@@ -98,11 +100,11 @@ if shift_direction:
         print(next_day.month,"/",next_day.day)
 
         #shift sleep times
-        avg_sleep_start = (avg_sleep_start + shift_direction * shift_hours) % 24
-        avg_sleep_end = (avg_sleep_end + shift_direction * shift_hours) % 24
+        pre_sleep_start = (pre_sleep_start + (shift_direction * shift_hours)) % 24
+        pre_sleep_end = (pre_sleep_end + (shift_direction * shift_hours)) % 24
 
-        print(f"pre_sleep_start time: ", format_time(avg_sleep_start))
-        print(f"pre_sleep_end time: ", format_time(avg_sleep_end))
+        print(f"pre_sleep_start time: ", format_time(pre_sleep_start))
+        print(f"pre_sleep_end time: ", format_time(pre_sleep_end))
 
         #caffine & nap cut off time
         stop_caffeine = (avg_sleep_start - 6) % 24
@@ -113,6 +115,24 @@ if shift_direction:
 
 
 
+#POST FLIGHT TIME SCHEDULE
+print()
+print (f"post_sleep_start time: ", format_time(avg_sleep_start))
+print(f"post_sleep_end time: ", format_time(avg_sleep_end))
+
+if direction == "east": #east means sleep earlier
+    get_light = 1
+    nap_cutoff = avg_sleep_start - 6
+    for i in range(pre_days):
+        #LET NAP TiME BE A RANGE like 12:00-15:00 and let get light also be a range before NAP TIME like 9:00-12:00
+        print(f"nap_cutoff time: ", format_time(nap_cutoff))
+        print(f"get sunlight between: ", format_time(get_light), "and", format_time(nap_cutoff))
+        nap_cutoff = nap_cutoff - shift_hours
+        get_light = nap_cutoff - 3
+elif direction == "west":
+    print("Try not to take naps")
+else:
+    print("Direction must be east or west, try again.")
 
 
 
