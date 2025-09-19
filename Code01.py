@@ -12,9 +12,8 @@ mydb = mysql.connector.connect(
 #create cursor instance
 my_cursor = mydb.cursor()
 
-#MAKE THIS CLASS? DONT MAKE IT GLOBAL VARIABLES
 #user input for flight_table
-#name = input("Enter Name: ")
+name = input("Enter Name: ")
 origin = input("Enter Origin City: ")
 destination = input("Enter Destination City: ")
 depart_datetime = input ("Departure Date and Time: (YYYY-MM-DD HH:MM): ")
@@ -22,9 +21,9 @@ flight_hours = float(input("Flight Hours: "))
 direction = input ("Flight Direction: ")
 pre_days = int(input("pre-adjust days: "))
 post_days = int(input("post-adjust days: "))
-
 avg_sleep_start = int(input ("Average Bed time (0-24): "))
 avg_sleep_end = int(input ("Average Wake up time (0-24): "))
+
 
 """
 #FLIGHT TABLE
@@ -72,101 +71,118 @@ print("Inserted plan_id:", plan_id)
 print(my_cursor.rowcount, " flight record inserted.")
 """
 
-#PRE FLIGHT PLAN TABLE
-shift_hours = 1
-pre_sleep_start = avg_sleep_start
-pre_sleep_end = avg_sleep_end
+class FLIGHTPLAN:
+    def flightSchedule(self, name, origin, destination, depart_datetime, flight_hours,
+                     direction, pre_days, post_days, avg_sleep_start, avg_sleep_end):
 
-def calculate_arrival():
-    # Parse departure datetime (naive → no tzinfo yet)
-    depart_dt = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M")
+        self.name = name
+        self.origin = origin
+        self.destination = destination
+        self.depart_datetime = depart_datetime
+        self.flight_hours = flight_hours
+        self.direction = direction
+        self.pre_days = pre_days
+        self.post_days = post_days
+        self.avg_sleep_start = avg_sleep_start
+        self.avg_sleep_end = avg_sleep_end
 
-    # Attach departure timezone
-    depart_dt = depart_dt.replace(tzinfo=ZoneInfo(origin))
+        self.shift_hours = 1
 
-    # Add flight duration to origin timezone
-    arrival_dt = depart_dt + timedelta(hours=flight_hours)
+        self.depart_dt = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M")
+        self.arrival_dt = self.calculate_arrival()
 
-    # Convert to destination timezone
-    arrival_dt = arrival_dt.astimezone(ZoneInfo(destination))
-
-    return depart_dt, arrival_dt
-
-depart_dt, arrival_dt = calculate_arrival()
-
-
-post_shifted_date = arrival_dt.date()
-pre_shifted_date = depart_dt.date()
+        self.pre_shifted_date = self.depart_dt.date()
+        self.post_shifted_date = self.arrival_dt.date()
 
 
-def format_time(decimal_hour):
-    hours = int(decimal_hour)
-    minutes = int((decimal_hour - hours) * 60)
-    return f"{hours:01d}:{minutes:02d}"
+    def calculate_arrival(self):
+        # Attach departure timezone
+        dt = self.depart_dt.replace(tzinfo=ZoneInfo(self.origin))
 
-def military_time(time_value, shift):
-    return (time_value + shift) % 24
+        # Add flight duration to origin timezone
+        arrival = dt + timedelta(hours=self.flight_hours)
 
-if direction == "east": #east means sleep earlier
-    shift_direction = -1
-elif direction == "west": #west means sleep later
-    shift_direction = +1
-else:
-    print("Direction must be east or west, try again.")
-    shift_direction = 0
-
-
-if shift_direction:
-    for i in range(pre_days):
-        next_day = pre_shifted_date - timedelta(days= pre_days - i)
-        print(next_day.month,"/",next_day.day)
-
-        #shift sleep times
-        pre_sleep_start = military_time(pre_sleep_start, shift_direction * shift_hours)
-        pre_sleep_end = military_time(pre_sleep_end, shift_direction * shift_hours)
-
-        print(f"pre_sleep_start time: ", format_time(pre_sleep_start))
-        print(f"pre_sleep_end time: ", format_time(pre_sleep_end))
-
-        #caffine & nap cut off time
-        stop_caffeine = military_time(pre_sleep_start, -6)
-        stop_nap = military_time(pre_sleep_start, -8)
-
-        print(f"no caffeine after: ", format_time(stop_caffeine))
-        print(f"no power naps after: ", format_time(stop_nap))
-
-
-print()
-print("YOUR FLIGHT IS ON: ", depart_dt.strftime("%Y-%m-%d %H:%M %Z"),
-      " AND WILL ARRIVE ON: ", arrival_dt.strftime("%Y-%m-%d %H:%M %Z"))
-print()
-print (f"post_sleep_start time: ", format_time(avg_sleep_start))
-print(f"post_sleep_end time: ", format_time(avg_sleep_end))
-
-#POST FLIGHT TIME SCHEDULE
-if direction == "east": #east means sleep earlier
-    nap_cutoff = avg_sleep_start - 6
-    get_light = nap_cutoff - 6
-    for i in range(post_days):
-        next_day = post_shifted_date + timedelta(days = i)
-        print(next_day.month, "/", next_day.day)
-
-        print(f"nap_cutoff time: ", format_time(nap_cutoff))
-        print(f"get sunlight between: ", format_time(get_light), "and", format_time(nap_cutoff - 3))
-
-        nap_cutoff = military_time(nap_cutoff, -1)
-        get_light = military_time(nap_cutoff, -6)
-
-elif direction == "west":
-    print("Try not to take naps")
-else:
-    print("Direction must be east or west, try again.")
+        # Convert to destination timezone
+        arrival = arrival.astimezone(ZoneInfo(self.destination))
+        return arrival
 
 
 
-"""
-Post-Flight Plan PseudoCode
-1. Let post flight plan be fixed according to the [avg_sleep_schedule] of the local time
-2. Adjust the range of nap time/caffeine intake according to the [post_adjust_days], does not matter if east or westward
-3. Could include the recommended time period to get sunlight
-"""
+    #helper Functions
+    def format_time(self, decimal_hour):
+        hours = int(decimal_hour)
+        minutes = int((decimal_hour - hours) * 60)
+        return f"{hours:01d}:{minutes:02d}"
+
+    def military_time(self, time_value, shift):
+        return (time_value + shift) % 24
+
+    def preFlightSchedule(self):
+        if self.direction == "east": #east means sleep earlier
+            shift_direction = -1
+        elif self.direction == "west": #west means sleep later
+            shift_direction = +1
+        else:
+            print("Direction must be east or west, try again.")
+            shift_direction = 0
+            return
+
+        pre_sleep_start = self.avg_sleep_start
+        pre_sleep_end = self.avg_sleep_end
+
+        print("---Pre-Flight Schedule---")
+
+        for i in range(self.pre_days):
+            next_day = self.pre_shifted_date - timedelta(days= self.pre_days - i)
+            print(next_day.month,"/",next_day.day)
+
+            #shift sleep times
+            pre_sleep_start = self.military_time(pre_sleep_start, shift_direction * self.shift_hours)
+            pre_sleep_end = self.military_time(pre_sleep_end, shift_direction * self.shift_hours)
+
+            print(f"pre_sleep_start time: ", self.format_time(pre_sleep_start))
+            print(f"pre_sleep_end time: ", self.format_time(pre_sleep_end))
+
+            #caffine & nap cut off time
+            stop_caffeine = self.military_time(pre_sleep_start, -6)
+            stop_nap = self.military_time(pre_sleep_start, -8)
+
+            print(f"no caffeine after: ", self.format_time(stop_caffeine))
+            print(f"no power naps after: ", self.format_time(stop_nap))
+        print()
+
+
+    def postFlightSchedule(self):
+        print("---Post-Flight Schedule---")
+        print("YOUR FLIGHT IS ON: ", self.depart_dt.strftime("%Y-%m-%d %H:%M %Z"),
+              " AND WILL ARRIVE ON: ", self.arrival_dt.strftime("%Y-%m-%d %H:%M %Z"))
+        print()
+        print (f"post_sleep_start time: ", self.format_time(self.avg_sleep_start))
+        print(f"post_sleep_end time: ", self.format_time(self.avg_sleep_end))
+        print()
+
+        if direction == "east": #east means sleep earlier
+            nap_cutoff = self.avg_sleep_start - 6
+            get_light = nap_cutoff - 6
+            for i in range(self.post_days):
+                next_day = self.post_shifted_date + timedelta(days = i)
+                print(next_day.month, "/", next_day.day)
+
+                print(f"nap_cutoff time: ", self.format_time(nap_cutoff))
+                print(f"get sunlight between: ", self.format_time(get_light), "and", self.format_time(nap_cutoff - 3))
+
+                nap_cutoff = self.military_time(nap_cutoff, -1)
+                get_light = self.military_time(nap_cutoff, -6)
+
+        elif self.direction == "west":
+            print("Try not to take naps")
+        else:
+            print("Direction must be east or west, try again.")
+
+my_flight = FLIGHTPLAN()
+my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hours,
+                         direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+
+my_flight.preFlightSchedule()
+my_flight.postFlightSchedule()
+
