@@ -12,7 +12,7 @@ mydb = mysql.connector.connect(
 #create cursor instance
 my_cursor = mydb.cursor()
 
-#user input for flight_table
+#---------------USER INPUTS-------------------------------
 name = input("Enter Name: ")
 origin = input("Enter Origin City: ")
 destination = input("Enter Destination City: ")
@@ -25,53 +25,9 @@ avg_sleep_start = int(input ("Average Bed time (0-24): "))
 avg_sleep_end = int(input ("Average Wake up time (0-24): "))
 
 
-"""
-#FLIGHT TABLE
-flightTableSql = """
-#INSERT INTO flight_table
-#(origin_city, destination_city, departure_datetime,
-#flight_hours, direction, pre_adjust_days, post_adjust_days)
-#VALUES (%s, %s, %s, %s, %s, %s, %s,)
-"""
-
-flightTableVal = (origin, destination, depart_datetime,
-       flight_hours,direction, pre_days, post_days)
-
-#USER TABLE
-userTableSql = """
-#INSERT INTO user_table(user_name, average_sleep_start, average_sleep_end)VALUES (%s, %s, %s)
-"""
-
-userTableVal = (name, avg_sleep_start, avg_sleep_end)
-
-my_cursor.execute(userTableSql, userTableVal)
-mydb.commit()
-user_id = my_cursor.lastrowid  # ID of the newly inserted user
-print("Inserted user_id:", user_id)
-
-my_cursor.execute(flightTableSql, flightTableVal)
-mydb.commit()
-flight_id = my_cursor.lastrowid  # ID of the newly inserted flight
-print("Inserted flight_id:", flight_id)
-
-
-#SLEEP TABLE
-sleepTableSql = """
-#INSERT INTO sleep_plan_table(flight_id, user_id, user_name)VALUES (%s, %s, %s)
-"""
-
-sleepTableVal = (flight_id, user_id, name)
-
-
-my_cursor.execute(sleepTableSql, sleepTableVal)
-mydb.commit()
-plan_id = my_cursor.lastrowid  # ID of the newly inserted flight
-print("Inserted plan_id:", plan_id)
-
-print(my_cursor.rowcount, " flight record inserted.")
-"""
-
+#---------------CLASS & LOCAL VARIABLES-------------------------------
 class FLIGHTPLAN:
+
     def flightSchedule(self, name, origin, destination, depart_datetime, flight_hours,
                      direction, pre_days, post_days, avg_sleep_start, avg_sleep_end):
 
@@ -86,29 +42,29 @@ class FLIGHTPLAN:
         self.avg_sleep_start = avg_sleep_start
         self.avg_sleep_end = avg_sleep_end
 
+        #shifting hour for pre/post flight schedule
         self.shift_hours = 1
 
+        #converting datetime to object so that we can do arithmetic
         self.depart_dt = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M")
         self.arrival_dt = self.calculate_arrival()
 
-        self.pre_shifted_date = self.depart_dt.date()
-        self.post_shifted_date = self.arrival_dt.date()
 
 
     def calculate_arrival(self):
-        # Attach departure timezone
+        #attaches departure timezone
         dt = self.depart_dt.replace(tzinfo=ZoneInfo(self.origin))
 
-        # Add flight duration to origin timezone
+        #adds the flight duration to origin timezone
         arrival = dt + timedelta(hours=self.flight_hours)
 
-        # Convert to destination timezone
+        #converts to destination timezone
         arrival = arrival.astimezone(ZoneInfo(self.destination))
         return arrival
 
 
 
-    #helper Functions
+    #helper functions
     def format_time(self, decimal_hour):
         hours = int(decimal_hour)
         minutes = int((decimal_hour - hours) * 60)
@@ -118,6 +74,8 @@ class FLIGHTPLAN:
         return (time_value + shift) % 24
 
     def preFlightSchedule(self):
+        self.pre_schedule = []
+
         if self.direction == "east": #east means sleep earlier
             shift_direction = -1
         elif self.direction == "west": #west means sleep later
@@ -133,52 +91,74 @@ class FLIGHTPLAN:
         print("---Pre-Flight Schedule---")
 
         for i in range(self.pre_days):
-            next_day = self.pre_shifted_date - timedelta(days= self.pre_days - i)
-            print(next_day.month,"/",next_day.day)
+            # date loop
+            next_day = self.depart_dt.date() - timedelta(days=self.pre_days - i)
+            print(next_day.month, "/", next_day.day)
 
             #shift sleep times
             pre_sleep_start = self.military_time(pre_sleep_start, shift_direction * self.shift_hours)
             pre_sleep_end = self.military_time(pre_sleep_end, shift_direction * self.shift_hours)
 
-            print(f"pre_sleep_start time: ", self.format_time(pre_sleep_start))
-            print(f"pre_sleep_end time: ", self.format_time(pre_sleep_end))
-
             #caffine & nap cut off time
             stop_caffeine = self.military_time(pre_sleep_start, -6)
             stop_nap = self.military_time(pre_sleep_start, -8)
 
+            self.pre_schedule.append({
+                "date": next_day,
+                "pre_sleep_start": self.format_time(pre_sleep_start),
+                "pre_sleep_end": self.format_time(pre_sleep_end),
+                "no_caffeine": self.format_time(stop_caffeine),
+                "no_nap": self.format_time(stop_nap)
+            })
+
+
+            print(f"pre_sleep_start time: ", self.format_time(pre_sleep_start))
+            print(f"pre_sleep_end time: ", self.format_time(pre_sleep_end))
             print(f"no caffeine after: ", self.format_time(stop_caffeine))
             print(f"no power naps after: ", self.format_time(stop_nap))
         print()
 
 
     def postFlightSchedule(self):
+        self.post_schedule = []
+
         print("---Post-Flight Schedule---")
         print("YOUR FLIGHT IS ON: ", self.depart_dt.strftime("%Y-%m-%d %H:%M %Z"),
               " AND WILL ARRIVE ON: ", self.arrival_dt.strftime("%Y-%m-%d %H:%M %Z"))
         print()
-        print (f"post_sleep_start time: ", self.format_time(self.avg_sleep_start))
-        print(f"post_sleep_end time: ", self.format_time(self.avg_sleep_end))
-        print()
+
 
         if direction == "east": #east means sleep earlier
             nap_cutoff = self.avg_sleep_start - 6
             get_light = nap_cutoff - 6
             for i in range(self.post_days):
-                next_day = self.post_shifted_date + timedelta(days = i)
+                next_day = self.arrival_dt.date() + timedelta(days = i)
                 print(next_day.month, "/", next_day.day)
-
-                print(f"nap_cutoff time: ", self.format_time(nap_cutoff))
-                print(f"get sunlight between: ", self.format_time(get_light), "and", self.format_time(nap_cutoff - 3))
 
                 nap_cutoff = self.military_time(nap_cutoff, -1)
                 get_light = self.military_time(nap_cutoff, -6)
+
+                self.post_schedule.append({
+                    "date": next_day,
+                    "post_sleep_start": self.format_time(avg_sleep_start),
+                    "post_sleep_end": self.format_time(avg_sleep_end),
+                    "nap_cutoff": self.format_time(nap_cutoff),
+                    "sunlight": self.format_time(get_light)
+                })
+
+                print(f"post_sleep_start time: ", self.format_time(self.avg_sleep_start))
+                print(f"post_sleep_end time: ", self.format_time(self.avg_sleep_end))
+                print(f"nap_cutoff time: ", self.format_time(nap_cutoff))
+                print(f"get sunlight between: ", self.format_time(get_light), "and", self.format_time(nap_cutoff - 3))
+
 
         elif self.direction == "west":
             print("Try not to take naps")
         else:
             print("Direction must be east or west, try again.")
 
+
+#------------------INITIALIZE CLASS------------------------------------
 my_flight = FLIGHTPLAN()
 my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hours,
                          direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
@@ -186,3 +166,40 @@ my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hour
 my_flight.preFlightSchedule()
 my_flight.postFlightSchedule()
 
+
+
+#------------------------MYSQL DATA----------------------
+
+inputTableSql = """
+INSERT INTO input_table
+(name, origin, destination, depart_datetime, flight_hours,
+direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+inputTableVal = (name, origin, destination, depart_datetime, flight_hours,
+                direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+
+
+my_cursor.execute(inputTableSql, inputTableVal)
+mydb.commit()
+flight_id = my_cursor.lastrowid  #ID of the newly inserted flight
+print("Inserted flight_id:", flight_id)
+
+#LOOPING DATA INTO PRE_TABLE
+for entry in my_flight.pre_schedule:
+    my_cursor.execute(
+        "INSERT INTO pre_table(flight_id, date, pre_sleep_start, pre_sleep_end, no_caffeine, no_nap) VALUES (%s,%s,%s,%s,%s,%s)",
+        (flight_id, entry["date"], entry["pre_sleep_start"], entry["pre_sleep_end"], entry["no_caffeine"], entry["no_nap"])
+    )
+mydb.commit()
+
+#LOOPING DATA INTO POST_TABLE
+for entry in my_flight.post_schedule:
+    my_cursor.execute(
+        "INSERT INTO post_table(flight_id, date, post_sleep_start, post_sleep_end, no_nap, sunlight) VALUES (%s,%s,%s,%s,%s,%s)",
+        (flight_id, entry["date"], entry["post_sleep_start"], entry["post_sleep_end"], entry["nap_cutoff"], entry["sunlight"])
+    )
+mydb.commit()
+
+print(my_cursor.rowcount, " flight record inserted.")
