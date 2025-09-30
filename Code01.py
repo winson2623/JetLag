@@ -4,19 +4,6 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
-#------------------------------------------------USER INPUTS-------------------------------------------------
-#name = input("Enter Name: ")
-#origin = input("Enter Origin City: ")
-#destination = input("Enter Destination City: ")
-#depart_datetime = input ("Departure Date and Time: (YYYY-MM-DD HH:MM): ")
-#flight_hours = float(input("Flight Hours: "))
-#direction = input ("Flight Direction: ")
-#pre_days = int(input("pre-adjust days: "))
-#post_days = int(input("post-adjust days: "))
-#avg_sleep_start = int(input ("Average Bed time (0-24): "))
-#avg_sleep_end = int(input ("Average Wake up time (0-24): "))
-
-
 #------------------------------------------CLASS & LOCAL VARIABLES-----------------------------------------
 class FLIGHTPLAN:
 
@@ -150,20 +137,21 @@ class FLIGHTPLAN:
             print("Direction must be east or west, try again.")
 
 
+#-------------------------------------------GUI INPUTS----------------------------------------------------------------
 def submit():
-    name = name_entry.get()
-    origin = origin_entry.get()
+    name = entries["name"].get()
+    origin = entries["origin"].get()
+    destination = entries["destination"].get()
+    depart_datetime = entries["depart_datetime"].get()
+    flight_hours = int(entries["flight_hours"].get())
+    direction = entries["direction"].get()
+    pre_days = int(entries["pre_days"].get())
+    post_days = int(entries["post_days"].get())
+    avg_sleep_start = int(entries["avg_sleep_start"].get())
+    avg_sleep_end = int(entries["avg_sleep_end"].get())
 
-    destination = "America/Los_Angeles"
-    depart_datetime = "2025-10-10 15:30"
-    flight_hours = 6
-    direction = "east"
-    pre_days = 2
-    post_days = 3
-    avg_sleep_start = 23
-    avg_sleep_end = 7
 
-    # ------------------------------------------INITIALIZE CLASS-------------------------------------------------
+    # -----------INITIALIZE CLASS------------
     my_flight = FLIGHTPLAN()
     my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hours,
                              direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
@@ -171,7 +159,7 @@ def submit():
     my_flight.preFlightSchedule()
     my_flight.postFlightSchedule()
 
-    # ------------------------------------------MYSQL DATA------------------------------------------------------
+    # -------------MYSQL DATA--------------
     inputTableSql = """
                     INSERT INTO input_table
                     (name, origin, destination, depart_datetime, flight_hours,
@@ -207,6 +195,16 @@ def submit():
 
     print(my_cursor.rowcount, " flight record inserted.")
 
+def entry_focus_in(event):
+    if event.widget.get() == event.widget.placeholder:
+        event.widget.delete(0, 'end')
+        event.widget.config(foreground='black')
+
+def entry_focus_out(event):
+    if event.widget.get() == "":
+        event.widget.insert(0,event.widget.placeholder)
+        event.widget.config(foreground='gray')
+
 
 # ------------------------------------------MYSQL CONNECTOR---------------------------------------------
 mydb = mysql.connector.connect(
@@ -220,23 +218,48 @@ my_cursor = mydb.cursor()
 
 # -------------------------------------------GUI LAYOUT--------------------------------------------------
 window = Tk()
-window.geometry("420x300")
+window.geometry("520x450")
 window.title("Jet Lag Scheduler")
 window.configure(background="white")
 
-label = Label(window,text="Name", font=("Arial", 12), background="white")
-label.place(x=0,y=0)
-label = Label(window,text="Origin", font=("Arial", 12), background="white")
-label.place(x=0,y=100)
+fields = [("Name","name",0),
+          ("Origin","origin",40),
+          ("Destination","destination",80),
+          ("Departure Date Time", "depart_datetime", 120),
+          ("Flight Hours","flight_hours",160),
+          ("Flight Direction","direction",200),
+          ("Pre-Flight Adjustment Days","pre_days",240),
+          ("Post-Flight Adjustment Days","post_days",280),
+          ("Average Bedtime","avg_sleep_start",320),
+          ("Average Wake Up Time","avg_sleep_end",360)]
+entries = {}
 
-name_entry = Entry(window, font=("Arial", 12), background="white")
-name_entry.place(x=200, y=0)
+for label_text, key, y in fields:
+    label = Label(window, text=label_text, font=("Arial", 12) ,background="white")
+    label.place(x=0, y=y)
 
-origin_entry = Entry(window, font=("Arial", 12), background="white")
-origin_entry.place(x=200, y=100)
+    entry = Entry(window, font=("Arial", 12), justify = "center",background="white")
+    entry.place(x=320, y=y)
+
+    if key == "depart_datetime":
+        entry.placeholder = "YYYY-MM-DD HH:MM"
+        entry.insert(0,entry.placeholder)
+        entry.config(foreground="gray")
+        entry.bind("<FocusIn>", entry_focus_in)
+        entry.bind("<FocusOut>", entry_focus_out)
+
+    if key in ("avg_sleep_start" , "avg_sleep_end"):
+        entry.placeholder = "0-23"
+        entry.insert(0,entry.placeholder)
+        entry.config(foreground="gray")
+        entry.bind("<FocusIn>", entry_focus_in)
+        entry.bind("<FocusOut>", entry_focus_out)
+
+    entries[key] = entry
+
 
 submit_btn = Button(window, text="Submit", command=submit)
-submit_btn.place(x=200, y=150)
+submit_btn.place(x=455, y=400)
 
 window.mainloop()
 
