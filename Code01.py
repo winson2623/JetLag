@@ -1,31 +1,23 @@
 import mysql.connector
+from tkinter import *
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-mydb = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    passwd="root1234",
-    database="jetlagdb"
-)
 
-#create cursor instance
-my_cursor = mydb.cursor()
-
-#---------------USER INPUTS-------------------------------
-name = input("Enter Name: ")
-origin = input("Enter Origin City: ")
-destination = input("Enter Destination City: ")
-depart_datetime = input ("Departure Date and Time: (YYYY-MM-DD HH:MM): ")
-flight_hours = float(input("Flight Hours: "))
-direction = input ("Flight Direction: ")
-pre_days = int(input("pre-adjust days: "))
-post_days = int(input("post-adjust days: "))
-avg_sleep_start = int(input ("Average Bed time (0-24): "))
-avg_sleep_end = int(input ("Average Wake up time (0-24): "))
+#------------------------------------------------USER INPUTS-------------------------------------------------
+#name = input("Enter Name: ")
+#origin = input("Enter Origin City: ")
+#destination = input("Enter Destination City: ")
+#depart_datetime = input ("Departure Date and Time: (YYYY-MM-DD HH:MM): ")
+#flight_hours = float(input("Flight Hours: "))
+#direction = input ("Flight Direction: ")
+#pre_days = int(input("pre-adjust days: "))
+#post_days = int(input("post-adjust days: "))
+#avg_sleep_start = int(input ("Average Bed time (0-24): "))
+#avg_sleep_end = int(input ("Average Wake up time (0-24): "))
 
 
-#---------------CLASS & LOCAL VARIABLES-------------------------------
+#------------------------------------------CLASS & LOCAL VARIABLES-----------------------------------------
 class FLIGHTPLAN:
 
     def flightSchedule(self, name, origin, destination, depart_datetime, flight_hours,
@@ -128,7 +120,7 @@ class FLIGHTPLAN:
         print()
 
 
-        if direction == "east": #east means sleep earlier
+        if self.direction == "east": #east means sleep earlier
             nap_cutoff = self.avg_sleep_start - 6
             get_light = nap_cutoff - 6
             for i in range(self.post_days):
@@ -140,8 +132,8 @@ class FLIGHTPLAN:
 
                 self.post_schedule.append({
                     "date": next_day,
-                    "post_sleep_start": self.format_time(avg_sleep_start),
-                    "post_sleep_end": self.format_time(avg_sleep_end),
+                    "post_sleep_start": self.format_time(self.avg_sleep_start),
+                    "post_sleep_end": self.format_time(self.avg_sleep_end),
                     "nap_cutoff": self.format_time(nap_cutoff),
                     "sunlight": self.format_time(get_light)
                 })
@@ -158,48 +150,94 @@ class FLIGHTPLAN:
             print("Direction must be east or west, try again.")
 
 
-#------------------INITIALIZE CLASS------------------------------------
-my_flight = FLIGHTPLAN()
-my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hours,
-                         direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+def submit():
+    name = name_entry.get()
+    origin = origin_entry.get()
 
-my_flight.preFlightSchedule()
-my_flight.postFlightSchedule()
+    destination = "America/Los_Angeles"
+    depart_datetime = "2025-10-10 15:30"
+    flight_hours = 6
+    direction = "east"
+    pre_days = 2
+    post_days = 3
+    avg_sleep_start = 23
+    avg_sleep_end = 7
+
+    # ------------------------------------------INITIALIZE CLASS-------------------------------------------------
+    my_flight = FLIGHTPLAN()
+    my_flight.flightSchedule(name, origin, destination, depart_datetime, flight_hours,
+                             direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+
+    my_flight.preFlightSchedule()
+    my_flight.postFlightSchedule()
+
+    # ------------------------------------------MYSQL DATA------------------------------------------------------
+    inputTableSql = """
+                    INSERT INTO input_table
+                    (name, origin, destination, depart_datetime, flight_hours,
+                     direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) \
+                    """
+
+    inputTableVal = (name, origin, destination, depart_datetime, flight_hours,
+                     direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+
+    my_cursor.execute(inputTableSql, inputTableVal)
+    mydb.commit()
+    flight_id = my_cursor.lastrowid  # ID of the newly inserted flight
+    print("Inserted flight_id:", flight_id)
+
+    # LOOPING DATA INTO PRE_TABLE
+    for entry in my_flight.pre_schedule:
+        my_cursor.execute(
+            "INSERT INTO pre_table(flight_id, date, pre_sleep_start, pre_sleep_end, no_caffeine, no_nap) VALUES (%s,%s,%s,%s,%s,%s)",
+            (flight_id, entry["date"], entry["pre_sleep_start"], entry["pre_sleep_end"], entry["no_caffeine"],
+             entry["no_nap"])
+        )
+    mydb.commit()
+
+    # LOOPING DATA INTO POST_TABLE
+    for entry in my_flight.post_schedule:
+        my_cursor.execute(
+            "INSERT INTO post_table(flight_id, date, post_sleep_start, post_sleep_end, no_nap, sunlight) VALUES (%s,%s,%s,%s,%s,%s)",
+            (flight_id, entry["date"], entry["post_sleep_start"], entry["post_sleep_end"], entry["nap_cutoff"],
+             entry["sunlight"])
+        )
+    mydb.commit()
+
+    print(my_cursor.rowcount, " flight record inserted.")
 
 
-
-#------------------------MYSQL DATA----------------------
-
-inputTableSql = """
-INSERT INTO input_table
-(name, origin, destination, depart_datetime, flight_hours,
-direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-"""
-
-inputTableVal = (name, origin, destination, depart_datetime, flight_hours,
-                direction, pre_days, post_days, avg_sleep_start, avg_sleep_end)
+# ------------------------------------------MYSQL CONNECTOR---------------------------------------------
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    passwd="root1234",
+    database="jetlagdb"
+)
+my_cursor = mydb.cursor()
 
 
-my_cursor.execute(inputTableSql, inputTableVal)
-mydb.commit()
-flight_id = my_cursor.lastrowid  #ID of the newly inserted flight
-print("Inserted flight_id:", flight_id)
+# -------------------------------------------GUI LAYOUT--------------------------------------------------
+window = Tk()
+window.geometry("420x300")
+window.title("Jet Lag Scheduler")
+window.configure(background="white")
 
-#LOOPING DATA INTO PRE_TABLE
-for entry in my_flight.pre_schedule:
-    my_cursor.execute(
-        "INSERT INTO pre_table(flight_id, date, pre_sleep_start, pre_sleep_end, no_caffeine, no_nap) VALUES (%s,%s,%s,%s,%s,%s)",
-        (flight_id, entry["date"], entry["pre_sleep_start"], entry["pre_sleep_end"], entry["no_caffeine"], entry["no_nap"])
-    )
-mydb.commit()
+label = Label(window,text="Name", font=("Arial", 12), background="white")
+label.place(x=0,y=0)
+label = Label(window,text="Origin", font=("Arial", 12), background="white")
+label.place(x=0,y=100)
 
-#LOOPING DATA INTO POST_TABLE
-for entry in my_flight.post_schedule:
-    my_cursor.execute(
-        "INSERT INTO post_table(flight_id, date, post_sleep_start, post_sleep_end, no_nap, sunlight) VALUES (%s,%s,%s,%s,%s,%s)",
-        (flight_id, entry["date"], entry["post_sleep_start"], entry["post_sleep_end"], entry["nap_cutoff"], entry["sunlight"])
-    )
-mydb.commit()
+name_entry = Entry(window, font=("Arial", 12), background="white")
+name_entry.place(x=200, y=0)
 
-print(my_cursor.rowcount, " flight record inserted.")
+origin_entry = Entry(window, font=("Arial", 12), background="white")
+origin_entry.place(x=200, y=100)
+
+submit_btn = Button(window, text="Submit", command=submit)
+submit_btn.place(x=200, y=150)
+
+window.mainloop()
+
+
