@@ -1,0 +1,115 @@
+body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+      margin: 0;
+      padding: 40px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      text-align: center;
+      color: #222;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    form {
+      background: white;
+      padding: 25px 30px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 550px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      transition: 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 4px #4CAF50;
+    }
+
+    button {
+      margin-top: 25px;
+      padding: 12px 20px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      width: 100%;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #43a047, #3e8e41);
+      transform: translateY(-2px);
+    }
+
+    #message {
+      margin-top: 25px;
+      font-weight: bold;
+      color: #2e7d32;
+      text-align: center;
+    }
+
+    h3 {
+      margin-top: 40px;
+      color: #1b5e20;
+      text-align: center;
+    }
+
+    table {
+      width: 95%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #81c784;
+      color: white;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tbody tr:hover {
+      background-color: #e8f5e9;
+      transition: background 0.3s;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 20px; }
+      form { width: 100%; padding: 20px; }
+      table { font-size: 14px; }
+    }

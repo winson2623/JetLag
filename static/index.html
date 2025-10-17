@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Jet Lag Scheduler</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" src="script.js"></script>
+</head>
+<body>
+   <h2>✈️ Jet Lag Scheduler</h2>
+  <form id="flightForm">
+    <label>Name:
+      <input type="text" name="name" required>
+    </label>
+    <label>Origin (timezone, e.g., Asia/Taipei):
+      <input type="text" name="origin" required>
+    </label>
+    <label>Destination (timezone, e.g., America/Los_Angeles):
+      <input type="text" name="destination" required>
+    </label>
+    <label>Departure DateTime (YYYY-MM-DD HH:MM):
+      <input type="text" name="depart_datetime" placeholder="YYYY-MM-DD HH:MM" required>
+    </label>
+    <label>Flight Hours:
+      <input type="number" name="flight_hours" required>
+    </label>
+    <label>Direction (east/west):
+      <input type="text" name="direction" required>
+    </label>
+    <label>Pre-Flight Adjustment Days:
+      <input type="number" name="pre_days" required>
+    </label>
+    <label>Post-Flight Adjustment Days:
+      <input type="number" name="post_days" required>
+    </label>
+    <label>Average Bedtime (0-23):
+      <input type="number" name="avg_sleep_start" required>
+    </label>
+    <label>Average Wake Up Time (0-23):
+      <input type="number" name="avg_sleep_end" required>
+    </label>
+    <button type="submit">Generate Schedule</button>
+  </form>
+
+  <div id="message"></div>
+
+  <h3>Pre-Flight Schedule</h3>
+  <table id="preScheduleTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Pre Sleep Start</th>
+        <th>Pre Sleep End</th>
+        <th>No Caffeine After</th>
+        <th>No Nap After</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Post-Flight Schedule</h3>
+  <table id="postScheduleTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Post Sleep Start</th>
+        <th>Post Sleep End</th>
+        <th>No Nap After</th>
+        <th>Get Light</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</body>
+</html>
