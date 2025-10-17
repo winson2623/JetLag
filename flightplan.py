@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import os
 
+#RUN "uvicorn flightplan:app --reload" to start backend
+
 app = FastAPI(title="Jet Lag Flight Planner API")
 
 # --- Serve static files ---
