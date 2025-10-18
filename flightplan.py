@@ -5,6 +5,65 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import os
+import requests
+
+def get_flights():
+    dep_iata = input("Enter departure airport IATA code (e.g., TPE): ").strip().upper()
+    arr_iata = input("Enter arrival airport IATA code (e.g., BKK): ").strip().upper()
+    flight_date = input("Enter flight date (YYYY-MM-DD): ").strip()
+
+    base_url = "https://api.aviationstack.com/v1/flightsFuture"
+    params = {
+        "access_key": "7b00304b4dbeef5e33178863939959ac",
+        "iataCode": dep_iata,
+        "type": "departure",
+        "date": flight_date
+    }
+
+    response = requests.get(base_url, params=params)
+
+    if response.status_code != 200:
+        print(f"Failed: {response.status_code}")
+        print(response.text)
+        return
+
+    data = response.json()
+    flights = data.get("data", [])
+
+    if not flights:
+        print("No flights found for these parameters.")
+        return
+
+    print(f"\nFlights from {dep_iata} → {arr_iata} on {flight_date}:\n")
+
+    found = False
+    for f in flights:
+        dep = f.get("departure", {})
+        arr = f.get("arrival", {})
+        ac = f.get("aircraft", {})
+        al = f.get("airline", {})
+        fl = f.get("flight", {})
+
+        # Filter only flights going to user input arrival
+        if arr.get("iataCode", "").upper() != arr_iata:
+            continue
+
+        dep_time = dep.get("scheduledTime", "N/A")
+        arr_time = arr.get("scheduledTime", "N/A")
+
+        print(
+            f"{al.get('name', '').title()} flight {fl.get('iataNumber', '').upper()} "
+            f"({ac.get('modelText', 'Unknown Aircraft')})\n"
+            f"From {dep.get('iataCode', '').upper()} → {arr.get('iataCode', '').upper()} "
+            f"| Departs {dep_time} → Arrives {arr_time}\n"
+        )
+        found = True
+
+    if not found:
+        print(f"No flights found from {dep_iata} → {arr_iata} on {flight_date}.")
+
+get_flights()
+
 
 #RUN "uvicorn flightplan:app --reload" to start backend
 
@@ -19,7 +78,7 @@ def serve_home():
 
 
 
-# --------------------------------------CLASS--------------------------------------
+# --------------------------------------CODE--------------------------------------
 class FLIGHTPLAN:
 
     def flightSchedule(self, name, origin, destination, depart_datetime, flight_hours,
