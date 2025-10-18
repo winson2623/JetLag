@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import os
 import requests
 
+"""
 def get_flights():
     dep_iata = input("Enter departure airport IATA code (e.g., TPE): ").strip().upper()
     arr_iata = input("Enter arrival airport IATA code (e.g., BKK): ").strip().upper()
@@ -62,8 +63,8 @@ def get_flights():
     if not found:
         print(f"No flights found from {dep_iata} → {arr_iata} on {flight_date}.")
 
-get_flights()
-
+#get_flights()
+"""
 
 #RUN "uvicorn flightplan:app --reload" to start backend
 
@@ -96,8 +97,13 @@ class FLIGHTPLAN:
         self.avg_sleep_end = avg_sleep_end
         self.shift_hours = 1
 
-        self.depart_dt = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M")
+
+        # Add timezone to departure
+        self.depart_dt = datetime.strptime(depart_datetime, "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo(origin))
         self.arrival_dt = self.calculate_arrival()
+
+        return self  # so you can chain calls
+
 
     def calculate_arrival(self):
         dt = self.depart_dt.replace(tzinfo=ZoneInfo(self.origin))
@@ -162,6 +168,116 @@ class FLIGHTPLAN:
                     "note": "Try to avoid naps and get sunlight in the afternoon."
                 })
         return post_schedule
+
+    def jetLagScore(self):
+        origin_tz = self.depart_dt.tzinfo.utcoffset(self.depart_dt).total_seconds() / 3600
+        dest_tz = self.arrival_dt.tzinfo.utcoffset(self.arrival_dt).total_seconds() / 3600
+        tz_diff = abs(origin_tz - dest_tz)
+        if tz_diff > 12:
+            tz_diff = 24 - tz_diff  # handle wraparound (e.g. TPE→LAX)
+
+        # 1. Timezone difference penalty (max 30 pts)
+        diff_score = max(0, 30 - tz_diff * 2.5)
+
+        # 2. Direction adjustment
+        if self.direction == "east":
+            direction_factor = +1
+            direction_score = -5
+        else:
+            direction_factor = -1
+            direction_score = +5
+
+        # 3. Arrival alignment (body clock) max 20
+        arrival_local_hour = self.arrival_dt.hour + self.arrival_dt.minute / 60
+        body_clock_hour = (arrival_local_hour - tz_diff * direction_factor) % 24
+        if 8 <= body_clock_hour <= 18:
+            arrival_score = 20
+        elif 6 <= body_clock_hour < 8 or 18 < body_clock_hour <= 22:
+            arrival_score = 10
+        else:
+            arrival_score = 0
+
+        # 4. In-flight sleep opportunity (max 30 pts)
+        # Assume flight covers continuous period backward from arrival
+        sleep_overlap = 0
+        for h in range(int(self.flight_hours)):
+            t = (body_clock_hour - self.flight_hours + h) % 24
+            if t >= self.avg_sleep_start or t < self.avg_sleep_end:
+                sleep_overlap += 1
+        sleep_ratio = sleep_overlap / max(self.flight_hours, 1)
+        plane_sleep_score = sleep_ratio * 30
+
+        # Adjust for service interruptions
+        if self.flight_hours > 8:
+            plane_sleep_score -= 3
+        elif self.flight_hours > 4:
+            plane_sleep_score -= 2
+        else:
+            plane_sleep_score -= 1
+        plane_sleep_score = max(0, plane_sleep_score)
+
+        # 5. Sleep pressure (stay awake too long after arrival)(max 15)
+        awake_time = abs(arrival_local_hour - self.avg_sleep_start)
+        if awake_time >= 10:
+            pressure_score = 10
+        elif awake_time >= 6 and awake_time < 10:   #best sleep pressure duration
+            pressure_score = 15
+        elif awake_time >= 2 and awake_time < 6:
+            pressure_score = 5
+        else:
+            pressure_score = 0
+
+        # 6. Total score
+        total_score = diff_score + direction_score + arrival_score + plane_sleep_score + pressure_score
+        total_score = max(0, min(100, total_score))
+
+        return {
+            "total_score": round(total_score, 1),
+            "arrival_score": round(arrival_score, 1),
+            "plane_sleep_score": round(plane_sleep_score, 1),
+            "pressure_score": round(pressure_score, 1),
+            "diff_score": round(diff_score, 1),
+            "direction_score": round(direction_score, 1),
+        }
+
+    def rankFlights(flights):
+        ranked = []
+        for f in flights:
+            scores = f.jetLagScore()
+            name = f.name
+            print(
+                f"{name}: Total={scores['total_score']} | "
+                f"Arrival={scores['arrival_score']} | "
+                f"Sleep={scores['plane_sleep_score']} | "
+                f"Pressure={scores['pressure_score']} | "
+                f"TZ Diff={scores['diff_score']} | "
+                f"Direction={scores['direction_score']}"
+            )
+            ranked.append((name, scores['total_score']))
+        ranked.sort(key=lambda x: x[1], reverse=True)
+        return ranked
+
+
+# -------------------------------------------- Test Input ------------------------------------------
+flights = [
+    FLIGHTPLAN().flightSchedule("Morning Flight", "Asia/Taipei", "America/Los_Angeles",
+                                "2025-10-30 10:10", 12, "east", 0, 3, 22, 6),
+    FLIGHTPLAN().flightSchedule("Evening Flight", "Asia/Taipei", "America/Los_Angeles",
+                                "2025-10-30 19:40", 11, "east", 0, 3, 22, 6),
+    FLIGHTPLAN().flightSchedule("Late Night Flight", "Asia/Taipei", "America/Los_Angeles",
+                                "2025-10-30 00:00", 11, "east", 0, 3, 22, 6),
+    FLIGHTPLAN().flightSchedule("Short flight", "Asia/Taipei", "Asia/Bangkok",
+                                "2025-10-30 9:10", 3, "west", 0, 0, 22, 6)
+]
+
+# ------------------------------------- Print jet-lag scores -----
+for f in flights:
+    print(f"{f.name} | Depart: {f.depart_dt.strftime('%Y-%m-%d %H:%M')} | Arrival: {f.arrival_dt.strftime('%Y-%m-%d %H:%M')} | Jet-lag score: {f.jetLagScore()}")
+
+# ------------------------------------- Print ranked flights -----
+print("\nRanked Flights:")
+for name, score in FLIGHTPLAN.rankFlights(flights):
+    print(f"{name}: {score}")
 
 
 # --------------------------------------FASTAPI MODEL--------------------------------------
