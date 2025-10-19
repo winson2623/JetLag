@@ -12,9 +12,8 @@ const form = document.getElementById("flightForm");
         const response = await fetch("http://127.0.0.1:8000/generate_schedule", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data) // wrap single flight in array
-      });
-
+          body: JSON.stringify(data)
+        });
 
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const result = await response.json();
@@ -50,22 +49,6 @@ const form = document.getElementById("flightForm");
           `;
           postTableBody.appendChild(tr);
         });
-
-      // Ranked table
-        const rankedTableBody = document.querySelector("#rankedFlightsTable tbody");
-        rankedTableBody.innerHTML = "";
-        result.flights_found.forEach(flight => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${flight.rank}</td>
-                <td>${flight.flight_name}</td>
-                <td>${flight.total_score}</td>
-                <td>${flight.departure}</td>
-                <td>${flight.arrival}</td>
-            `;
-            rankedTableBody.appendChild(tr);
-        });
-
 
       } catch (error) {
         console.error(error);
