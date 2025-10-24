@@ -6,7 +6,28 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h2>Jet Lag Scheduler</h2>
+    <header class="top-header">
+    <div class="nav-left">
+        <a href="#">Home</a>
+        <a href="#scheduler">Scheduler</a>
+        <a href="#flights">Flights</a>
+        <a href="#">Contact</a>
+    </div>
+    <div class="nav-right">
+        <input type="text" placeholder="Search...">
+        <button>Go</button>
+    </div>
+    </header>
+
+    <header class="hero-section">
+        <img src="/static/landing.jpg" alt="Jet Lag Scheduler" class="hero-image">
+        <div class="hero-overlay">
+            <h1>Jet Lag Scheduler</h1>
+            <p>Plan your sleep, travel smarter, and beat jet lag.</p>
+        </div>
+    </header>
+
+    <h2 id="scheduler">Jet Lag Scheduler</h2>
     <form id="flightForm">
         <label>Name: <input type="text" name="name" required></label>
         <label>Origin:
@@ -167,7 +188,7 @@
         <tbody></tbody>
     </table>
 
-    <h3>Ranked Flights (Best to Worst for Jet Lag)</h3>
+    <h3 id="flights">Ranked Flights (Best to Worst for Jet Lag)</h3>
     <table id="rankedFlightsTable">
         <thead>
             <tr>
