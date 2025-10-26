@@ -19,7 +19,7 @@ const form = document.getElementById("flightForm");
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const result = await response.json();
 
-        messageDiv.innerHTML = `Flight schedule generated successfully for <b>${result.traveler}</b>!`;
+        messageDiv.innerHTML = `Flight schedule generated successfully!`;
 
         // --- Fill Pre-Flight Table ---
         const preTableBody = document.querySelector("#preScheduleTable tbody");
