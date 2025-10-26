@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel                  #incoming data request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-import os
-import requests
+import os                                       #file path
+import requests                                 #aviation api
 
 #RUN "uvicorn flightplan:app --reload" to start backend
 
@@ -73,7 +73,7 @@ TZ_IATA_MAP = {
 }
 
 
-# --- Serve static files ---
+# ---static files---
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
@@ -111,7 +111,7 @@ class FLIGHTPLAN:
         # calculate arrival
         self.arrival_dt = self.calculate_arrival()
 
-        return self  # so you can chain calls
+        return self
 
 
     def calculate_arrival(self):
@@ -181,14 +181,18 @@ class FLIGHTPLAN:
     def jetLagScore(self):
         origin_tz = self.depart_dt.tzinfo.utcoffset(self.depart_dt).total_seconds() / 3600
         dest_tz = self.arrival_dt.tzinfo.utcoffset(self.arrival_dt).total_seconds() / 3600
+
+        #TIME ZONE DIFFERENCE SCORE
         tz_diff = abs(origin_tz - dest_tz)
         if tz_diff > 12:
             tz_diff = 24 - tz_diff
 
-        diff_score = max(0, 30 - tz_diff * 2.5)
+        #DIRECTION SCORE
+        diff_score = max(0.0, 30.0 - tz_diff * 2.5)
         direction_factor = +1 if self.direction == "east" else -1
         direction_score = -5 if self.direction == "east" else +5
 
+        #ARRIVAL TIME SCORE
         arrival_local_hour = self.arrival_dt.hour + self.arrival_dt.minute / 60
         body_clock_hour = (arrival_local_hour - tz_diff * direction_factor) % 24
         if 8 <= body_clock_hour <= 18:
@@ -198,6 +202,7 @@ class FLIGHTPLAN:
         else:
             arrival_score = 0
 
+        #PLANE SLEEP SCORE
         sleep_overlap = 0
         for h in range(int(self.flight_hours)):
             t = (body_clock_hour - self.flight_hours + h) % 24
@@ -206,6 +211,7 @@ class FLIGHTPLAN:
         sleep_ratio = sleep_overlap / max(self.flight_hours, 1)
         plane_sleep_score = sleep_ratio * 30
 
+        #IN FLIGHT SERVICE DISRUPTION TO SLEEP
         if self.flight_hours > 8:
             plane_sleep_score -= 3
         elif self.flight_hours > 4:
@@ -214,6 +220,7 @@ class FLIGHTPLAN:
             plane_sleep_score -= 1
         plane_sleep_score = max(0, plane_sleep_score)
 
+        #PRESSURE SLEEP SCORE
         awake_time = abs(arrival_local_hour - self.avg_sleep_start)
         if awake_time >= 10:
             pressure_score = 10
@@ -225,7 +232,7 @@ class FLIGHTPLAN:
             pressure_score = 0
 
         total_score = diff_score + direction_score + arrival_score + plane_sleep_score + pressure_score
-        total_score = max(0, min(100, total_score))
+        total_score = max(0.0, min(100.0, total_score))
         return {
             "total_score": round(total_score, 1),
             "arrival_score": round(arrival_score, 1),
@@ -250,7 +257,7 @@ class FLIGHTPLAN:
 
 
     # -------------------------------------- flights API FETCH -------------------------------------------
-    def get_flights(self, origin, destination, depart_datetime):
+    def get_flights(self, origin, destination, depart_datetime,direction):
         dep_iata = TZ_IATA_MAP.get(origin, "Unknown").strip().upper()
         arr_iata = TZ_IATA_MAP.get(destination, "Unknown").strip().upper()
         flight_date = depart_datetime.date()
@@ -280,6 +287,7 @@ class FLIGHTPLAN:
             al = f.get("airline", {})
             fl = f.get("flight", {})
 
+            #filters arrival airport IATA
             if arr.get("iataCode", "").upper() != arr_iata:
                 continue
 
@@ -300,16 +308,14 @@ class FLIGHTPLAN:
             except ValueError:
                 continue
 
-            # Approx flight duration (crude but okay for demo)
+            #Approx flight duration
             dep_hour = int(dep_time.split(":")[0])
             arr_hour = int(arr_time.split(":")[0])
             flight_hours = (arr_hour - dep_hour) % 24
             flight_hours = flight_hours if flight_hours > 0 else 2
 
-            # Guess direction by longitude difference (east vs west)
-            direction = "east" if dep_iata in ["TPE", "NRT", "ICN"] else "west"
 
-            # Create FLIGHTPLAN
+            #Create FLIGHTPLAN
             flight_obj = FLIGHTPLAN()
             flight_obj.orig_dep_time = dep_time
             flight_obj.orig_arr_time = arr_time
@@ -351,7 +357,8 @@ def generate_schedule(data: FlightRequest):
     flights_data = planner.get_flights(
         origin=data.origin,
         destination=data.destination,
-        depart_datetime=datetime.strptime(data.depart_datetime, "%Y-%m-%d %H:%M")
+        depart_datetime=datetime.strptime(data.depart_datetime, "%Y-%m-%d %H:%M"),
+        direction = data.direction
     )
 
     # --- Create FLIGHTPLAN for each flight for ranking ---
@@ -361,11 +368,11 @@ def generate_schedule(data: FlightRequest):
             f.flight_hours, f.direction, 0, 0, data.avg_sleep_start, data.avg_sleep_end
         )
 
-        # --- Rank all flights ---
-        # The updated flights_data is used for ranking.
+    # --- Rank all flights ---
+    # The updated flights_data is used for ranking.
     ranked_flights = FLIGHTPLAN.rankFlights(flights_data)
 
-    # --- PrePost schedule for the chosen "user flight" ---
+
     user_flight = FLIGHTPLAN().flightSchedule(
         f"{data.name}'s flight",
         data.origin, data.destination,
