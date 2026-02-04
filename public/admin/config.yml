@@ -2,6 +2,8 @@ backend:
   name: github
   repo: winson2623/JetLag
   branch: CMS
+  auth_type: oauth
+  client_id: Ov23liwZAfUzQoxTDso0
 
 media_folder: public/uploads
 public_folder: /uploads
