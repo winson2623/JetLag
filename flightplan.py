@@ -10,6 +10,11 @@ import requests                                 #aviation api
 #RUN "uvicorn flightplan:app --reload" to start backend
 
 app = FastAPI(title="Jet Lag Flight Planner API")
+# Decap CMS
+app.mount("/admin", StaticFiles(directory="public/admin", html=True), name="admin")
+
+# Your CSS / JS / images
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 TZ_IATA_MAP = {
     # Asia

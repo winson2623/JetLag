@@ -1,0 +1,19 @@
+backend:
+  name: github
+  repo: your-org/your-repo
+  branch: main
+
+media_folder: public/uploads
+public_folder: /uploads
+
+collections:
+  - name: "pages"
+    label: "Pages"
+    files:
+      - name: "home"
+        label: "Home"
+        file: "content/home.json"
+        format: "json"
+        fields:
+          - { name: "title", label: "Title", widget: "string" }
+          - { name: "heroText", label: "Hero Text", widget: "text" }
