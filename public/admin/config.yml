@@ -1,7 +1,7 @@
 backend:
   name: github
-  repo: your-org/your-repo
-  branch: main
+  repo: winson2623/JetLag
+  branch: CMS
 
 media_folder: public/uploads
 public_folder: /uploads
